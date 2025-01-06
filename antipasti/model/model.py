@@ -44,9 +44,9 @@ class ANTIPASTI(Module):
         self.input_shape = input_shape
         self.mode = mode
         if self.mode == 'full':
-            self.fully_connected_input = n_filters * ((input_shape-filter_size+1)//pooling_size) ** 2
+            self.fully_connected_input = n_filters * ((input_shape-filter_size+1)//pooling_size) ** 2   # see below on stride
             self.conv1 = Conv2d(1, n_filters, filter_size)
-            self.pool = MaxPool2d((pooling_size, pooling_size))
+            self.pool = MaxPool2d((pooling_size, pooling_size)) # in the paper, stride=1, here stride=pooling_size by default
             self.relu = ReLU()
         else:
             self.fully_connected_input = self.input_shape ** 2
@@ -66,7 +66,7 @@ class ANTIPASTI(Module):
         """
         inter = x
         if self.mode == 'full':
-            x = self.conv1(x) + torch.transpose(self.conv1(x), 2, 3)
+            x = self.conv1(x) + torch.transpose(self.conv1(x), 2, 3) # why add transpose?
             x = self.relu(x)
             inter = x = self.pool(x)
         x = x.view(x.size(0), -1)

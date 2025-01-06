@@ -338,12 +338,15 @@ class Preprocessing(object):
 
         """
         for i, entry in enumerate(self.entries):
+            print('Processing map ' + str(i+1) + ' out of ' + str(len(self.entries)) + ': ' + entry)
+            
             file_name = entry + self.selection
             path = self.structures_path + file_name + self.file_type_input
             new_path = self.dccm_map_path + entry
             self.generate_fv_pdb(self.structures_path+entry+self.file_type_input, lresidues=True) 
             if not self.cmaps: # and len(np.load(self.residues_path + path[-11:-7] + '.npy')) > 500:
-                subprocess.call(['/usr/local/bin/RScript', str(self.scripts_path)+'pdb_to_dccm.r', str(path), str(new_path), str(self.modes)], shell=True, stdout=open(os.devnull, 'wb'))
+                # subprocess.call(['/usr/local/bin/RScript', str(self.scripts_path)+'pdb_to_dccm.r', str(path), str(new_path), str(self.modes)], shell=True, stdout=open(os.devnull, 'wb'))
+                subprocess.call(['/usr/local/bin/RScript', str(self.scripts_path)+'pdb_to_dccm.r', str(path), str(new_path), str(self.modes)], stdout=open(os.devnull, 'wb'))
             #elif not self.cmaps:
             #    print(path[-11:-7])
             #    subprocess.call(['/usr/local/bin/RScript', str(self.scripts_path)+'pdb_to_dccm_aa.r', str(path), str(new_path), str(self.modes)], stdout=open(os.devnull, 'wb'))
@@ -352,8 +355,8 @@ class Preprocessing(object):
             if os.path.exists(path):
                 os.remove(path)
             
-            if i % 25 == 0: 
-                print('Map ' + str(i+1) + ' out of ' + str(len(self.entries)) + ' processed.')
+            # if i % 25 == 0: 
+                # print('Map ' + str(i+1) + ' out of ' + str(len(self.entries)) + ' processed.')
 
     def get_lists_of_lengths(self, selected_entries):
         r"""Retrieves lists with the lengths of the heavy and light chains.
