@@ -162,7 +162,8 @@ class Preprocessing(object):
         df = df[(df.antigen_type.notna()) & (df.antigen_type != 'NA')][['pdb', 'affinity']]
         if self.affinity_entries_only:
             df = df[(df.affinity.notna()) & (df.affinity != 'None')]
-        df = df[~df['pdb'].isin(self.pathological)] # Removing pathological cases 
+        if self.pathological:
+            df = df[~df['pdb'].isin(self.pathological)] # Removing pathological cases 
 
         return list(df['pdb']), list(df['affinity']), df
 
@@ -177,7 +178,7 @@ class Preprocessing(object):
             Keeps residues whose name ends with a letter from 'A' to 'Z'.
         lresidues: bool
             The names of each residue are stored in ``self.residues_path``.
-        upsymchain: int
+        hupsymchain: int
             Upper limit of heavy chain residues due to a change in the numbering convention. Only useful when using ``AlphaFold``.
         lupsymchain: int
             Upper limit of light chain residues due to a change in the numbering convention. Only useful when using ``AlphaFold``.
@@ -338,12 +339,23 @@ class Preprocessing(object):
 
         """
         for i, entry in enumerate(self.entries):
-            file_name = entry + self.selection
-            path = self.structures_path + file_name + self.file_type_input
-            new_path = self.dccm_map_path + entry
-            self.generate_fv_pdb(self.structures_path+entry+self.file_type_input, lresidues=True) 
+            file_name = entry + self.selection  # 1hh6 + _fv
+            path = self.structures_path + file_name + self.file_type_input  # /structures/ + /1hh6_fv + .pdb
+            new_path = self.dccm_map_path + entry  # data/dccm_maps/ + /1hh6
+
+            # added for training part of AF (can be cleaned up)
+            if self.alphafold:
+                h, l, _ = self.get_lists_of_lengths(selected_entries=str(entry).split())
+                h = h[0] 
+                l = l[0] 
+                hupsymchain = 1 + h 
+                lupsymchain = 1 + l 
+            else:
+                hupsymchain, lupsymchain = None, None
+            self.generate_fv_pdb(self.structures_path+entry+self.file_type_input, lresidues=True, hupsymchain=hupsymchain, lupsymchain=lupsymchain)
             if not self.cmaps: # and len(np.load(self.residues_path + path[-11:-7] + '.npy')) > 500:
-                subprocess.call(['/usr/local/bin/RScript', str(self.scripts_path)+'pdb_to_dccm.r', str(path), str(new_path), str(self.modes)], shell=True, stdout=open(os.devnull, 'wb'))
+                subprocess.call(['/usr/local/bin/RScript', str(self.scripts_path)+'pdb_to_dccm.r', str(path), str(new_path), str(self.modes)], stdout=open(os.devnull, 'wb'))
+                # subprocess.call(['/usr/local/bin/RScript', str(self.scripts_path)+'pdb_to_dccm.r', str(path), str(new_path), str(self.modes)], shell=True, stdout=open(os.devnull, 'wb'))
             #elif not self.cmaps:
             #    print(path[-11:-7])
             #    subprocess.call(['/usr/local/bin/RScript', str(self.scripts_path)+'pdb_to_dccm_aa.r', str(path), str(new_path), str(self.modes)], stdout=open(os.devnull, 'wb'))
