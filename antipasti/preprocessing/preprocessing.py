@@ -87,7 +87,7 @@ class Preprocessing(object):
             residues_path='lists_of_residues/',
             file_type_input='.pdb',
             selection='_fv',
-            pathological=None,
+            pathological=[],
             renew_maps=False,
             renew_residues=False,
             cmaps=False,
@@ -162,8 +162,7 @@ class Preprocessing(object):
         df = df[(df.antigen_type.notna()) & (df.antigen_type != 'NA')][['pdb', 'affinity']]
         if self.affinity_entries_only:
             df = df[(df.affinity.notna()) & (df.affinity != 'None')]
-        if self.pathological:
-            df = df[~df['pdb'].isin(self.pathological)] # Removing pathological cases 
+        df = df[~df['pdb'].isin(self.pathological)] # Removing pathological cases 
 
         return list(df['pdb']), list(df['affinity']), df
 
@@ -306,18 +305,20 @@ class Preprocessing(object):
             # Obtaining antigen(s)
             for i, line in enumerate(content[header_lines:]):
                 if any(line[chain_range] in agc for agc in antigen_chains) and h_chain not in antigen_chains and l_chain not in antigen_chains:
-                    idx_list_antigen.append(i+header_lines)
-                    if lresidues == True:
-                        full_res = line[chain_range] + line[res_range] + line[res_extra_letter]
-                        if line[residue_type_range] in amino_acid_dictionary:
-                            full_res = amino_acid_dictionary[line[residue_type_range]] + full_res
-                            if full_res != list_residues[-1]:
-                                list_residues.append(full_res)    
+                    if line[chain_range]:
+                        idx_list_antigen.append(i+header_lines)
+                        if lresidues == True:
+                            full_res = line[chain_range] + line[res_range] + line[res_extra_letter]
+                            if line[residue_type_range] in amino_acid_dictionary:
+                                full_res = amino_acid_dictionary[line[residue_type_range]] + full_res
+                                if full_res != list_residues[-1]:
+                                    list_residues.append(full_res)    
 
-        # List with name of every residue is saved if selected
-            saving_path = rpath + path[-8:-4] + '.npy'
-            #if not os.path.exists(saving_path):
-            np.save(saving_path, list_residues)
+            # List with name of every residue is saved if selected
+            if lresidues:
+                saving_path = rpath + path[-8:-4] + '.npy'
+                #if not os.path.exists(saving_path):
+                np.save(saving_path, list_residues)
             
         # Creating new file
         with open(new_path, 'w') as f_new:
@@ -339,10 +340,6 @@ class Preprocessing(object):
 
         """
         for i, entry in enumerate(self.entries):
-            file_name = entry + self.selection  # 1hh6 + _fv
-            path = self.structures_path + file_name + self.file_type_input  # /structures/ + /1hh6_fv + .pdb
-            new_path = self.dccm_map_path + entry  # data/dccm_maps/ + /1hh6
-
             # added for training part of AF (can be cleaned up)
             if self.alphafold:
                 h, l, _ = self.get_lists_of_lengths(selected_entries=str(entry).split())
@@ -350,9 +347,18 @@ class Preprocessing(object):
                 l = l[0] 
                 hupsymchain = 1 + h 
                 lupsymchain = 1 + l 
+                tag = "_af3"
+                lresidues = False
             else:
                 hupsymchain, lupsymchain = None, None
-            self.generate_fv_pdb(self.structures_path+entry+self.file_type_input, lresidues=True, hupsymchain=hupsymchain, lupsymchain=lupsymchain)
+                lresidues = True
+                tag = ''
+            
+            file_name = entry + tag + self.selection  # 1hh6 (+ _af3) + _fv
+            path = self.structures_path + file_name + self.file_type_input  # /structures/ + /1hh6_fv + .pdb
+            new_path = self.dccm_map_path + entry # data/dccm_maps/ + /1hh6
+
+            self.generate_fv_pdb(self.structures_path+entry+tag+self.file_type_input, lresidues=lresidues, hupsymchain=hupsymchain, lupsymchain=lupsymchain)
             if not self.cmaps: # and len(np.load(self.residues_path + path[-11:-7] + '.npy')) > 500:
                 subprocess.call(['/usr/local/bin/RScript', str(self.scripts_path)+'pdb_to_dccm.r', str(path), str(new_path), str(self.modes)], stdout=open(os.devnull, 'wb'))
                 # subprocess.call(['/usr/local/bin/RScript', str(self.scripts_path)+'pdb_to_dccm.r', str(path), str(new_path), str(self.modes)], shell=True, stdout=open(os.devnull, 'wb'))
@@ -410,7 +416,6 @@ class Preprocessing(object):
                 light.append(len([idx for idx in list_of_residues if idx[chain_pos] == l_chain]))
             else:
                 light.append(0)
-
         return heavy, light, selected_entries
 
     def get_max_min_chains(self):
@@ -483,7 +488,7 @@ class Preprocessing(object):
             self.generate_maps()
 
         dccm_paths = sorted(glob.glob(os.path.join(self.dccm_map_path, '*.npy')))
-        selected_entries = [dccm_paths[i][-8:-4] for i in range(len(dccm_paths))]
+        selected_entries = [dccm_paths[i].replace('_af3','')[-8:-4] for i in range(len(dccm_paths))]
 
         if renew_residues:
             heavy, light, selected_entries = self.get_lists_of_lengths(selected_entries)
@@ -604,7 +609,7 @@ class Preprocessing(object):
         """  
         pdb_id = self.test_pdb_id
 
-        if self.alphafold is True:
+        if self.alphafold:
             h, l, _ = self.get_lists_of_lengths(selected_entries=str(pdb_id[:-3]).split())
             h = h[0] 
             l = l[0] 
