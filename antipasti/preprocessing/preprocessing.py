@@ -104,7 +104,6 @@ class Preprocessing(object):
             h_offset=0,
             l_offset=0,
             ag_residues=0,
-            id_category='pdb'
     ):
         self.data_path = data_path
         self.scripts_path = scripts_path
@@ -128,7 +127,7 @@ class Preprocessing(object):
         self.ag_residues = ag_residues
 
         self.df_path = data_path + df
-        self.entries, self.affinity, self.df = self.clean_df(id_category=id_category)
+        self.entries, self.affinity, self.df = self.clean_df()
         self.heavy, self.light, self.selected_entries = self.initialisation(renew_maps, renew_residues)
         self.max_res_list_h, self.max_res_list_l, self.min_res_list_h, self.min_res_list_l = self.get_max_min_chains()
         self.train_x, self.train_y, self.labels, self.raw_imgs = self.load_training_images()
@@ -143,7 +142,7 @@ class Preprocessing(object):
             self.test_x = self.load_test_image()
 
 
-    def clean_df(self, id_category = 'pdb'):
+    def clean_df(self):
         r"""Cleans the database containing the PDB entries.
 
         Returns
@@ -157,15 +156,15 @@ class Preprocessing(object):
 
         """
 
-        df = pd.read_csv(self.df_path, sep='\t', header=0)[[id_category, 'antigen_type', 'affinity']]
-        df.drop_duplicates(keep='first', subset=id_category, inplace=True)
-        df[id_category] = df[id_category].str.lower().str.replace('+', '') # lowercase and remove '+' signs of scientific notation
-        df = df[(df.antigen_type.notna()) & (df.antigen_type != 'NA')][[id_category, 'affinity']]
+        df = pd.read_csv(self.df_path, sep='\t', header=0)[['pdb', 'antigen_type', 'affinity']]
+        df.drop_duplicates(keep='first', subset='pdb', inplace=True)
+        df['pdb'] = df['pdb'].str.lower().str.replace('+', '') # lowercase and remove '+' signs of scientific notation
+        df = df[(df.antigen_type.notna()) & (df.antigen_type != 'NA')][['pdb', 'affinity']]
         if self.affinity_entries_only:
             df = df[(df.affinity.notna()) & (df.affinity != 'None')]
-        df = df[~df[id_category].isin(self.pathological)] # Removing pathological cases 
+        df = df[~df['pdb'].isin(self.pathological)] # Removing pathological cases 
 
-        return list(df[id_category]), list(df['affinity']), df
+        return list(df['pdb']), list(df['affinity']), df
 
     def generate_fv_pdb(self, path, keepABC=True, lresidues=False, hupsymchain=None, lupsymchain=None):
         r"""Generates a new PDB file containing the antigen residues and the antibody variable region.
