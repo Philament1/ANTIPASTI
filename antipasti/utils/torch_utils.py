@@ -10,7 +10,7 @@ from antipasti.model.model import ANTIPASTI
 from antipasti.utils.biology_utils import check_train_test_identity 
 from config import DATA_DIR
 
-def create_test_set(preprocessed_data, test_size=None, random_state=0, residues_path=DATA_DIR+'lists_of_residues/'):
+def create_test_set(preprocessed_data, test_size=None, random_state=0, residues_path=DATA_DIR+'lists_of_residues/', threshold=0.9):
     r"""Creates the test set given a set of input images and their corresponding labels.
 
     Parameters
@@ -55,7 +55,7 @@ def create_test_set(preprocessed_data, test_size=None, random_state=0, residues_
         else:
             test_instance = list(np.array(preprocessed_data.labels)[test_idx])
 
-        if check_train_test_identity(list(np.array(preprocessed_data.labels)[indices_train]), test_instance, preprocessed_data.max_res_list_h, preprocessed_data.max_res_list_l, threshold=0.9, residues_path=residues_path):
+        if check_train_test_identity(list(np.array(preprocessed_data.labels)[indices_train]), test_instance, preprocessed_data.max_res_list_h, preprocessed_data.max_res_list_l, threshold=threshold, residues_path=residues_path):
             indices_test.append(test_idx)
         else:
             i -= 1
