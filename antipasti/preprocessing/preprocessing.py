@@ -359,6 +359,10 @@ class Preprocessing(object):
             path = self.structures_path + file_name + self.file_type_input  # /structures/ + /1hh6_fv + .pdb
             new_path = self.dccm_map_path + entry # data/dccm_maps/ + /1hh6
 
+            if os.path.exists(new_path + '.npy'): # if the file already exists
+                print(f"Skipping {new_path} as it already exists.")
+                continue
+
             self.generate_fv_pdb(self.structures_path+entry+tag+self.file_type_input, lresidues=lresidues, hupsymchain=hupsymchain, lupsymchain=lupsymchain)
             if not self.cmaps: # and len(np.load(self.residues_path + path[-11:-7] + '.npy')) > 500:
                 subprocess.call(['/usr/local/bin/RScript', str(self.scripts_path)+'pdb_to_dccm.r', str(path), str(new_path), str(self.modes)], stdout=open(os.devnull, 'wb'))
