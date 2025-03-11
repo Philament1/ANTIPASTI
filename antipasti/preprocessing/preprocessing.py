@@ -158,7 +158,7 @@ class Preprocessing(object):
 
         """
 
-        df = pd.read_csv(self.df_path, sep='\t', header=0)[[id_category, 'antigen_type', 'affinity']]
+        df = pd.read_csv(self.df_path, sep='\t', header=0, dtype={id_category: str})[[id_category, 'antigen_type', 'affinity']]
         df.drop_duplicates(keep='first', subset=id_category, inplace=True)
         df[id_category] = df[id_category].str.lower().str.replace('+', '') # lowercase and remove '+' signs of scientific notation
         df = df[(df.antigen_type.notna()) & (df.antigen_type != 'NA')][[id_category, 'affinity']]
@@ -349,14 +349,14 @@ class Preprocessing(object):
                 l = l[0] 
                 hupsymchain = 1 + h 
                 lupsymchain = 1 + l 
-                tag = "_af3"
+                tag = "_af"
                 lresidues = False
             else:
                 hupsymchain, lupsymchain = None, None
                 lresidues = True
                 tag = ''
             
-            file_name = entry + tag + self.selection  # 1hh6 (+ _af3) + _fv
+            file_name = entry + tag + self.selection  # 1hh6 (+ _af) + _fv
             path = self.structures_path + file_name + self.file_type_input  # /structures/ + /1hh6_fv + .pdb
             new_path = self.dccm_map_path + entry # data/dccm_maps/ + /1hh6
 
