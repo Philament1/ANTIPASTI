@@ -10,7 +10,7 @@ from antipasti.model.model import ANTIPASTI
 from antipasti.utils.biology_utils import check_train_test_identity 
 from config import DATA_DIR
 
-def create_test_set(preprocessed_data, test_size=None, random_state=0, residues_path=DATA_DIR+'lists_of_residues/'):
+def create_test_set(preprocessed_data, test_size=None, random_state=0, residues_path=DATA_DIR+'lists_of_residues/', threshold=0.9, ag_diff=True):
     r"""Creates the test set given a set of input images and their corresponding labels.
 
     Parameters
@@ -23,6 +23,10 @@ def create_test_set(preprocessed_data, test_size=None, random_state=0, residues_
         Set lot number.
     residues_path: str
         Path to the folder containing the list of residues per entry.
+    threshold: float
+        Highest accepted sequence identity value.
+    ag_diff: bool
+        ``True`` to check if antibodies are bound to different antigens
         
     Returns
     -------
@@ -55,7 +59,7 @@ def create_test_set(preprocessed_data, test_size=None, random_state=0, residues_
         else:
             test_instance = list(np.array(preprocessed_data.labels)[test_idx])
 
-        if check_train_test_identity(list(np.array(preprocessed_data.labels)[indices_train]), test_instance, preprocessed_data.max_res_list_h, preprocessed_data.max_res_list_l, threshold=0.9, residues_path=residues_path):
+        if check_train_test_identity(list(np.array(preprocessed_data.labels)[indices_train]), test_instance, preprocessed_data.max_res_list_h, preprocessed_data.max_res_list_l, threshold=threshold, residues_path=residues_path, ag_diff=ag_diff):
             indices_test.append(test_idx)
         else:
             i -= 1
@@ -192,7 +196,7 @@ def training_step(model, criterion, optimiser, train_x, test_x, train_y, test_y,
         
     return train_losses, test_losses, inter_filter, y_test, output_test
 
-def training_routine(model, criterion, optimiser, train_x, test_x, train_y, test_y, n_max_epochs=120, max_corr=0.87, batch_size=32, verbose=True):
+def training_routine(model, criterion, optimiser, train_x, test_x, train_y, test_y, n_max_epochs=120, max_corr=0.87, batch_size=32, verbose=True, train_layers='all'):
     r"""Performs a chosen number of training steps.
     
     Parameters
@@ -219,6 +223,8 @@ def training_routine(model, criterion, optimiser, train_x, test_x, train_y, test
         Number of samples that pass through the model before its parameters are updated.
     verbose: bool
         ``True`` to print the losses in each epoch.
+    train_layers: str
+        If ``all``, all layers are trained. If ``fc``, only the fully-connected layer is trained.
     
     Returns
     -------
@@ -236,6 +242,19 @@ def training_routine(model, criterion, optimiser, train_x, test_x, train_y, test
     """   
     train_losses = []
     test_losses = []
+
+    # Freezing layers
+    if train_layers == 'all':
+        pass
+    elif train_layers == 'fc':
+        optimiser.param_groups[0]['params'] = []
+        for name, param in model.named_parameters():
+            if name.startswith(train_layers):
+                optimiser.param_groups[0]['params'].append(param)
+            else:
+                param.requires_grad = False
+    else:
+        raise ValueError('Invalid value for train_layers.')
 
     for epoch in range(n_max_epochs):
         train_losses, test_losses, inter_filter, y_test, output_test = training_step(model, criterion, optimiser, train_x, test_x, train_y, test_y, train_losses, test_losses, epoch, batch_size, verbose)
