@@ -10,7 +10,7 @@ from antipasti.model.model import ANTIPASTI
 from antipasti.utils.biology_utils import check_train_test_identity 
 from config import DATA_DIR
 
-def create_test_set(preprocessed_data, test_size=None, random_state=0, residues_path=DATA_DIR+'lists_of_residues/', threshold=0.9):
+def create_test_set(preprocessed_data, test_size=None, random_state=0, residues_path=DATA_DIR+'lists_of_residues/', threshold=0.9, ag_diff=True):
     r"""Creates the test set given a set of input images and their corresponding labels.
 
     Parameters
@@ -23,6 +23,10 @@ def create_test_set(preprocessed_data, test_size=None, random_state=0, residues_
         Set lot number.
     residues_path: str
         Path to the folder containing the list of residues per entry.
+    threshold: float
+        Highest accepted sequence identity value.
+    ag_diff: bool
+        ``True`` to check if antibodies are bound to different antigens
         
     Returns
     -------
@@ -46,7 +50,9 @@ def create_test_set(preprocessed_data, test_size=None, random_state=0, residues_
     random_order = indices_train.copy()
     np.random.shuffle(random_order)
 
-    for i in range(int(len(indices_train)*test_size)):
+    N = len(indices_train)
+
+    for i in range(N):
         test_idx = random_order[i]
         indices_train.remove(test_idx)
 
@@ -55,12 +61,14 @@ def create_test_set(preprocessed_data, test_size=None, random_state=0, residues_
         else:
             test_instance = list(np.array(preprocessed_data.labels)[test_idx])
 
-        if check_train_test_identity(list(np.array(preprocessed_data.labels)[indices_train]), test_instance, preprocessed_data.max_res_list_h, preprocessed_data.max_res_list_l, threshold=threshold, residues_path=residues_path):
+        if check_train_test_identity(list(np.array(preprocessed_data.labels)[indices_train]), test_instance, preprocessed_data.max_res_list_h, preprocessed_data.max_res_list_l, threshold=threshold, residues_path=residues_path, ag_diff=ag_diff):
             indices_test.append(test_idx)
         else:
             i -= 1
             indices_train.append(test_idx)
-
+        
+        if len(indices_test) == int(N*test_size):
+            break
     
     train_x = preprocessed_data.train_x[indices_train]
     test_x = preprocessed_data.train_x[indices_test]
@@ -68,13 +76,13 @@ def create_test_set(preprocessed_data, test_size=None, random_state=0, residues_
     test_y = preprocessed_data.train_y[indices_test]
 
     # Converting to tensors
-    train_x = train_x.reshape(train_x.shape[0], 1, train_x.shape[1], train_x.shape[1])
+    train_x = train_x.reshape(train_x.shape[0], 1, train_x.shape[1], train_x.shape[2])
     train_x = train_x.astype(np.float32)
     train_x  = torch.from_numpy(train_x)
     train_y = train_y.astype(np.float32).reshape(train_y.shape[0], 1)
     train_y = torch.from_numpy(train_y)
 
-    test_x = test_x.reshape(test_x.shape[0], 1, test_x.shape[2], test_x.shape[2])
+    test_x = test_x.reshape(test_x.shape[0], 1, test_x.shape[1], test_x.shape[2])
     test_x = test_x.astype(np.float32)
     test_x  = torch.from_numpy(test_x)
     test_y = test_y.astype(np.float32).reshape(test_y.shape[0], 1, 1)

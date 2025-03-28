@@ -4,6 +4,7 @@ r"""This module contains the pre-processing class.
 
 :Authors:   Kevin Michalewicz <k.michalewicz22@imperial.ac.uk>
 
+:Contributors:   Phil Yu <phil.yu21@imperial.ac.uk>
 """
 
 import glob
@@ -421,6 +422,7 @@ class Preprocessing(object):
                 light.append(len([idx for idx in list_of_residues if idx[chain_pos] == l_chain]))
             else:
                 light.append(0)
+        
         return heavy, light, selected_entries
 
     def get_max_min_chains(self):
@@ -488,11 +490,12 @@ class Preprocessing(object):
             PDB valid entries.
 
         """
+
         if renew_maps:
             self.generate_maps()
 
         dccm_paths = sorted(glob.glob(os.path.join(self.dccm_map_path, '*.npy')))
-        selected_entries = [dccm_paths[i].replace('_af','')[-8:-4] for i in range(len(dccm_paths))]
+        selected_entries = [dccm_paths[i][-8:-4] for i in range(len(dccm_paths))]
 
         if renew_residues:
             heavy, light, selected_entries = self.get_lists_of_lengths(selected_entries)

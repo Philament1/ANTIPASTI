@@ -146,7 +146,7 @@ def antigen_identity(seq1, seq2):
     """
     return seq1.rsplit(':', 1)[1] == seq2.rsplit(':', 1)[1]
 
-def check_train_test_identity(training_set_ids, test_set_ids, max_res_list_h=None, max_res_list_l=None, threshold=0.9, residues_path=DATA_DIR+'lists_of_residues/', verbose=False):
+def check_train_test_identity(training_set_ids, test_set_ids, max_res_list_h=None, max_res_list_l=None, threshold=0.9, residues_path=DATA_DIR+'lists_of_residues/', verbose=False, ag_diff=True):
     r"""Tests the sequence identity of the training and test sets.
 
     Parameters
@@ -173,8 +173,9 @@ def check_train_test_identity(training_set_ids, test_set_ids, max_res_list_h=Non
             identity = antibody_sequence_identity(tr_seq, test_seq)
             if identity > threshold:
                 return False
-            # if antigen_identity(tr_seq, test_seq):
-            #     return False
+            if ag_diff:
+                if antigen_identity(tr_seq, test_seq):
+                    return False
 
     print(f'All train/test pairs passed the similarity check (Identity <= {threshold:.2%})')
     return True
