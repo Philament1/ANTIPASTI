@@ -20,7 +20,7 @@ class ANTIPASTI(Module):
         Size of filters in the convolutional layer.
     pooling_size: int
         Size of the max pooling operation.
-    input_shape: int
+    input_shape: int/tuple
         Shape of the normal mode correlation maps.
     l1_lambda: float
         Weight of L1 regularisation.
@@ -41,15 +41,15 @@ class ANTIPASTI(Module):
         self.n_filters = n_filters
         self.filter_size = filter_size
         self.pooling_size = pooling_size
-        self.input_shape = input_shape
+        self.input_shape = (input_shape, input_shape) if isinstance(input_shape, int) else input_shape
         self.mode = mode
         if self.mode == 'full':
-            self.fully_connected_input = n_filters * ((input_shape-filter_size+1)//pooling_size) ** 2
+            self.fully_connected_input = n_filters * ((input_shape[0]-filter_size+1)//pooling_size) * ((input_shape[1]-filter_size+1)//pooling_size)
             self.conv1 = Conv2d(1, n_filters, filter_size)
             self.pool = MaxPool2d((pooling_size, pooling_size))
             self.relu = ReLU()
         else:
-            self.fully_connected_input = self.input_shape ** 2
+            self.fully_connected_input = self.input_shape[0] * self.input_shape[1]
         self.fc1 = Linear(self.fully_connected_input, 1, bias=False)
         self.l1_lambda = l1_lambda
 
@@ -66,7 +66,10 @@ class ANTIPASTI(Module):
         """
         inter = x
         if self.mode == 'full':
-            x = self.conv1(x) + torch.transpose(self.conv1(x), 2, 3)
+            if x.shape[2] == x.shape[3]:
+                x = self.conv1(x) + torch.transpose(self.conv1(x), 2, 3)
+            else:
+                x = self.conv1(x)
             x = self.relu(x)
             inter = x = self.pool(x)
         x = x.view(x.size(0), -1)
