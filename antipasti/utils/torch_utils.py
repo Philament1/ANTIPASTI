@@ -90,7 +90,7 @@ def create_test_set(preprocessed_data, test_size=None, random_state=0, residues_
 
     return train_x, test_x, train_y, test_y, indices_train, indices_test
 
-def training_step(model, criterion, optimiser, train_x, test_x, train_y, test_y, train_losses, test_losses, epoch, batch_size, verbose):
+def training_step(model, criterion, optimiser, train_x, test_x, train_y, test_y, train_losses, test_losses, epoch, batch_size, verbose, loss_weights):
     r"""Performs a training step.
     
     Parameters
@@ -140,10 +140,11 @@ def training_step(model, criterion, optimiser, train_x, test_x, train_y, test_y,
     x_test, y_test = Variable(test_x), Variable(test_y)
 
     # Filters before the fully-connected layer
-    size_inter = int(np.sqrt(model.fully_connected_input/model.n_filters))
-    inter_filter = np.zeros((x_train.size()[0], model.n_filters, size_inter, size_inter))
+    # size_inter = int(np.sqrt(model.fully_connected_input/model.n_filters))
+    size_inter = ((x_train.size()[2]-model.filter_size-model.pooling_size+2), (x_train.size()[3]-model.filter_size-model.pooling_size+2))
+    inter_filter = np.zeros((x_train.size()[0], model.n_filters, size_inter[0], size_inter[1]))
     if model.mode != 'full':
-        inter_filter = np.zeros((x_train.size()[0], 1, model.input_shape, model.input_shape))
+        inter_filter = np.zeros((x_train.size()[0], 1, model.input_shape[0], model.input_shape[1]))
     permutation = torch.randperm(x_train.size()[0])
 
     for i in range(0, x_train.size()[0], batch_size):
@@ -163,7 +164,10 @@ def training_step(model, criterion, optimiser, train_x, test_x, train_y, test_y,
         l1_loss = model.l1_regularization_loss()
 
         # Compute the mean of the weighted squared differences
-        mse_loss = torch.mean((output_train[:, 0] - batch_y[:, 0])**2)
+        if loss_weights is None:
+            mse_loss = torch.mean((output_train[:, 0] - batch_y[:, 0])**2)
+        else:
+            mse_loss = torch.sum(loss_weights[indices] * (output_train[:, 0] - batch_y[:, 0])**2)
 
         #mse_loss = criterion(output_train[:, 0], batch_y[:, 0])
         loss_train = mse_loss + l1_loss
@@ -182,7 +186,7 @@ def training_step(model, criterion, optimiser, train_x, test_x, train_y, test_y,
     with torch.no_grad():
         for i in range(x_test.size()[0]):
             optimiser.zero_grad()
-            output_t, _ = model(x_test[i].reshape(1, 1, model.input_shape, model.input_shape))
+            output_t, _ = model(x_test[i].reshape(1, 1, model.input_shape[0], model.input_shape[1]))
             l1_loss = model.l1_regularization_loss()
             loss_t = criterion(output_t[:, 0], y_test[i][:, 0])
             loss_test += loss_t.item() / x_test.size()[0]
@@ -200,7 +204,7 @@ def training_step(model, criterion, optimiser, train_x, test_x, train_y, test_y,
         
     return train_losses, test_losses, inter_filter, y_test, output_test
 
-def training_routine(model, criterion, optimiser, train_x, test_x, train_y, test_y, n_max_epochs=120, max_corr=0.87, batch_size=32, verbose=True, train_layers='all'):
+def training_routine(model, criterion, optimiser, train_x, test_x, train_y, test_y, n_max_epochs=120, max_corr=0.87, batch_size=32, verbose=True, train_layers='all', loss_weights=None):
     r"""Performs a chosen number of training steps.
     
     Parameters
@@ -261,7 +265,7 @@ def training_routine(model, criterion, optimiser, train_x, test_x, train_y, test
         raise ValueError('Invalid value for train_layers.')
 
     for epoch in range(n_max_epochs):
-        train_losses, test_losses, inter_filter, y_test, output_test = training_step(model, criterion, optimiser, train_x, test_x, train_y, test_y, train_losses, test_losses, epoch, batch_size, verbose)
+        train_losses, test_losses, inter_filter, y_test, output_test = training_step(model, criterion, optimiser, train_x, test_x, train_y, test_y, train_losses, test_losses, epoch, batch_size, verbose, loss_weights)
 
         # Computing and printing the correlation coefficient
         corr = np.corrcoef(np.array(output_test).T, y_test[:,0].detach().numpy().T)[1,0]

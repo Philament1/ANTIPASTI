@@ -44,9 +44,9 @@ class ANTIPASTI(Module):
         self.input_shape = (input_shape, input_shape) if isinstance(input_shape, int) else input_shape
         self.mode = mode
         if self.mode == 'full':
-            self.fully_connected_input = n_filters * ((input_shape[0]-filter_size+1)//pooling_size) * ((input_shape[1]-filter_size+1)//pooling_size)
+            self.fully_connected_input = n_filters * int(input_shape[0]-filter_size-pooling_size+2) * int(input_shape[1]-filter_size-pooling_size+2)
             self.conv1 = Conv2d(1, n_filters, filter_size)
-            self.pool = MaxPool2d((pooling_size, pooling_size))
+            self.pool = MaxPool2d((pooling_size, pooling_size), stride=1)
             self.relu = ReLU()
         else:
             self.fully_connected_input = self.input_shape[0] * self.input_shape[1]
