@@ -1,3 +1,15 @@
+### MAIN FORK CHANGES FOR M4R PROJECT
+
+Bulk of project code is in **Notebooks**: 
+* Input Data Pipeline
+* Training
+* Inference
+
+Key modifications to ANTIPASTI
+* Since the structures are AF3 models instead of experimental, they must be converted from file format mmCIF (AF3 output) to .pdb (ANTIPASTI input) which is done via PyMOL - these structures are assigned unique database IDs (instead of PDB IDs) for identification and tagged with _af to differentiate them from experimental structures, and Preprocessing has been adapted to accomodate.
+* During train-test split checks, the antigen difference check bypassed as the dataset all share an antigen. The option for an AF3 confidence threshold is added, which helps filter the test set for entries that have a high model confidence.
+* To support training on a variety of input maps in this project, we implement rectangular input support throughout ANTIPASTI's model, preprocessing, and utils.
+
 # ANTIPASTI: interpretable prediction of antibody binding affinity exploiting Normal Modes and Deep Learning
 
 [![Python 3.8 - 3.11](https://img.shields.io/badge/Python-3.8%20--%203.11-blue)](https://www.python.org/downloads/release/python-3113/)
