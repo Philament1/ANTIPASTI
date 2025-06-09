@@ -119,6 +119,8 @@ def training_step(model, criterion, optimiser, train_x, test_x, train_y, test_y,
         Number of samples that pass through the model before its parameters are updated.
     verbose: bool
         ``True`` to print the losses in each epoch.
+    loss_weights: torch.Tensor
+        Weights for the loss function. If ``None``, the loss is not weighted.
     
     Returns
     -------
@@ -167,7 +169,8 @@ def training_step(model, criterion, optimiser, train_x, test_x, train_y, test_y,
         if loss_weights is None:
             mse_loss = torch.mean((output_train[:, 0] - batch_y[:, 0])**2)
         else:
-            mse_loss = torch.sum(loss_weights[indices] * (output_train[:, 0] - batch_y[:, 0])**2)
+            loss_w = loss_weights[indices]/ torch.sum(loss_weights[indices])
+            mse_loss = torch.sum(loss_w * (output_train[:, 0] - batch_y[:, 0])**2)
 
         #mse_loss = criterion(output_train[:, 0], batch_y[:, 0])
         loss_train = mse_loss + l1_loss
@@ -177,7 +180,7 @@ def training_step(model, criterion, optimiser, train_x, test_x, train_y, test_y,
         optimiser.step()
         # Adding batch contribution to training loss
         tr_loss += loss_train.item() * batch_size / x_train.size()[0]
-        tr_mse += mse_loss * batch_size / x_train.size()[0]
+        tr_mse += mse_loss.item() * batch_size / x_train.size()[0]
 
     train_losses.append(tr_loss)
     loss_test = 0

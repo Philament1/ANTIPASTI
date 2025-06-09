@@ -41,7 +41,7 @@ def get_maps_of_interest(preprocessed_data, learnt_filter, affinity_thr=-8):
     low_aff = []
     train_x = preprocessed_data.train_x
     train_y = preprocessed_data.train_y
-    input_shape = train_x.shape[-1]
+    input_shape = train_x.shape[-2:]
 
     for i in range(train_y.shape[0]):
         if train_y[i] < affinity_thr:
@@ -50,8 +50,8 @@ def get_maps_of_interest(preprocessed_data, learnt_filter, affinity_thr=-8):
             low_aff.append(train_x[i])
 
     # Obtaining the maps
-    mean_learnt = cv2.resize(-learnt_filter, dsize=(input_shape, input_shape))
-    mean_image = np.mean(train_x, axis=0).reshape(input_shape, input_shape)
+    mean_learnt = cv2.resize(-learnt_filter, dsize=(input_shape[0], input_shape[1]))
+    mean_image = np.mean(train_x, axis=0).reshape(input_shape[0], input_shape[1])
     mean_diff_image = np.mean(high_aff, axis=0) - np.mean(low_aff, axis=0)
 
     return mean_learnt, mean_image, mean_diff_image
